@@ -3,56 +3,25 @@ from http.client import HTTPException
 import json
 from typing import List, Dict
 
-from ansible_collections.adamgoossens.stackrox.plugins.module_utils import exceptions
+from ansible_collections.community.stackrox.plugins.module_utils.basic import StackroxService
+from ansible_collections.community.stackrox.plugins.module_utils import exceptions
 
-# some aliases for easy reading
-InitBundleId = str
-InitBundle = dict
-ClusterId = str
+class Service(StackroxService):
+    def __init__(self, **kwargs):
+        kwargs['api_base'] = 'cluster-init'
+        super().__init__(**kwargs)
 
-class ClusterInitService:
-    def __init__(self, token, central, validate_certs=True):
-        self.token = token
-        self.central = central
-        self.validate_certs = validate_certs
-        self.api_base = f"{central}/v1/cluster-init"
-        self.headers = {
-            "Authorization": f"Bearer {token}",
-            "Accept": "application/json",
-            "Content-Type": "application/json"
-        }
-
-    def __request(self, 
-                  url_suffix='init-bundles', 
-                  expect_code=200,
-                  method='GET',
-                  data=None):
-
-        url = f"{self.api_base}/{url_suffix}"
-        data_str = json.dumps(data) if data else None
-
-        resp = open_url(url=url,
-                        headers=self.headers,
-                        validate_certs=self.validate_certs,
-                        method=method,
-                        data=data_str)
-
-        if resp.status == 401:
-            raise exceptions.UnauthorizedException(f"API token unauthorized for method {method} to URL {url}")
-
-        if resp.status != expect_code:
-            raise exceptions.StackroxApiException(f"Unexpected status code from Stackrox API. Expected = {expect_code}, received = {resp.status}")
-
-        body = resp.read()
-        return json.loads(body)
-
-    def list_initbundles(self) -> List[InitBundle]:
+    def list_initbundles(self):
         #
         # Return a list of all bundles
         #
-        return self.__request()['items']
+        res = self._request(
+                url_suffix='init-bundles'
+              )
 
-    def get_initbundle(self, name: str) -> InitBundle:
+        return res['items']
+
+    def get_initbundle(self, name):
         #
         # Return the bundle identified by the given name.
         #
@@ -65,23 +34,21 @@ class ClusterInitService:
 
         return None
 
-    def create_initbundle(self, name: str) -> InitBundle:
+    def create_initbundle(self, name):
         #
         # Create a bundle with the given name.
         #
-        if type(name) != str:
-            raise ValueError("Name must be a string")
-
-        bundle = self.__request(
+        bundle = self._request(
+                    url_suffix='init-bundles',
                     method='POST',
-                    data={"name": name }
+                    data={"name": name}
                  )
 
         return bundle
 
     def revoke_initbundles(self, 
-                           bundle_ids: List[InitBundleId],
-                           impacted_cluster_ids: List[ClusterId] = []) -> List[InitBundleId]:
+                           bundle_ids,
+                           impacted_cluster_ids):
         #
         # Delete the bundle identified by the given
         # bundle ID.
@@ -109,7 +76,7 @@ class ClusterInitService:
             "confirmImpactedClusterIds": impacted_cluster_ids
         }
 
-        result = self.__request(method="PATCH",
+        result = self._request(method="PATCH",
                                 url_suffix="init-bundles/revoke",
                                 data=data)
 
