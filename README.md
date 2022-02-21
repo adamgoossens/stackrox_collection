@@ -1,3 +1,3 @@
-# Ansible Collection - adamgoossens.stackrox
+# Stackrox Ansible Collection - community.stackrox
 
 Documentation for the collection.
