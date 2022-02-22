@@ -21,6 +21,11 @@ class StackroxModule(AnsibleModule):
         super().__init__(**kwargs)
 
 class StackroxService:
+    """
+    Base class for Stackrox API services. Handles authentication and provides the _request method
+    for easily making requests to the API.
+    """
+
     def __init__(self, api_base, token, username, password, central, validate_certs=True, **kwargs):
         self.token = token
         self.username = username
@@ -44,6 +49,18 @@ class StackroxService:
                   expect_code=200,
                   method='GET',
                   data=None):
+        """
+        Make a request to the Stackrox API. 
+
+        `url_suffix` will be appended to the API base URL.
+
+        `query_string`, if provided, will be appended directly after the url suffix. Note:
+        you need to make sure the query string is well formed and URL encoded, as this isn't
+        done for you.
+
+        `data` is expected to be a dict and will be dumped to a JSON string, then included 
+        in the body of the request.
+        """
 
         if url_suffix:
             url = f"{self.api_url}/{url_suffix}"
